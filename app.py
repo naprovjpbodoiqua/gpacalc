@@ -1,81 +1,75 @@
-import streamlit as st
+def calculate_grade_strategy():
+    print("\n--- TOOL TÍNH ĐIỂM ---")
+    
+    try:
+        # Nhập điểm thành phần
+        print("Nhập lần lượt: Giữa kỳ(20%)  Thực hành(10%)  Quizzes(5%)  Chuyên cần(5%)")
+        print("Ví dụ: 7 8 9 10")
+        val = list(map(float, input(">> ").split()))
+        
+        if len(val) != 4:
+            print("Lỗi: Nhập thiếu điểm rồi fen.")
+            return
 
-# Cấu hình trang
-st.set_page_config(page_title=" Grade Calculator", page_icon="🎓")
+        mid, prac, quiz, attend = val
+        w_final = 0.6
+        
+        # Tính điểm tích lũy (40% đầu)
+        current = (mid * 0.2) + (prac * 0.1) + (quiz * 0.05) + (attend * 0.05)
+        
+        print("-" * 45)
+        print(f"GPA hiện tại tích luỹ được (hệ số 0.4): {current:.2f}")
+        print("-" * 45)
 
-st.title("Grade Calculator")
-st.write("Tool tính điểm")
+        # Hàm tính điểm thi cần thiết
+        def get_needed_score(target_gpa):
+            return (target_gpa - current) / w_final
 
-# Tạo 4 cột để nhập điểm cho đẹp
-col1, col2, col3, col4 = st.columns(4)
+        # 1. Để qua môn (Trên F => Total >= 4.0)
+        score_pass = get_needed_score(4.0)
+        pass_msg = ""
+        if score_pass <= 0:
+            pass_msg = "Auto qua"
+            score_pass = 0 # Để dùng cho mốc dưới
+        elif score_pass > 10:
+            pass_msg = "Không  qua môn được"
+        else:
+            pass_msg = f"Cần >= {score_pass:.2f} để qua môn"
+            
+        print(f"{pass_msg}")
 
-with col1:
-    mid = st.number_input("Giữa kỳ (20%)", min_value=0.0, max_value=10.0, step=0.1, value=7.0)
-with col2:
-    prac = st.number_input("Thực hành (10%)", min_value=0.0, max_value=10.0, step=0.1, value=8.0)
-with col3:
-    quiz = st.number_input("Quizzes (5%)", min_value=0.0, max_value=10.0, step=0.1, value=9.0)
-with col4:
-    attend = st.number_input("Chuyên cần (5%)", min_value=0.0, max_value=10.0, step=0.1, value=10.0)
+        # 2. Để ĐƯỢC học cải thiện (Dưới C => 4.0 <= Total < 5.5)
+        # Tức là điểm thi phải nhỏ hơn mốc đạt 5.5
+        score_reach_c = get_needed_score(5.5)
+        
+        if score_reach_c <= 0:
+            # Hiện tại đã >= 5.5 rồi, không thể xuống D được nữa
+            print(f"Điểm cuối kì cần để đạt dưới C (5.5): KHÔNG THỂ ")
+        elif score_pass > 10:
+            print(f"Điểm cuối kì cần để đạt dưới C (5.5): KHÔNG THỂ ")
+        else:
+            # Vùng an toàn để cải thiện: Từ [Qua môn] đến [Sát C]
+            # Lấy score_reach_c - 0.5 để minh hoạ an toàn
+            safe_max = score_reach_c - 0.5
+            if safe_max < score_pass:
+                print(f"Điểm cuối kì cần để đạt dưới C (5.5): Rất khó căn (Vùng điểm quá hẹp)")
+            else:
+                print(f"Điểm cuối kì cần để đạt dưới C (5.5): Từ {score_pass:.2f} đến < {score_reach_c:.2f} (Nên thi tầm {(score_pass - 0.5):.1f} - {safe_max:.1f})")
 
-# Trọng số
-w_final = 0.6
-current = (mid * 0.2) + (prac * 0.1) + (quiz * 0.05) + (attend * 0.05)
+        # 3. Để đạt B (Total >= 7.0)
+        score_b = get_needed_score(7.0)
+        b_msg = ""
+        if score_b <= 0:
+            b_msg = "Chắc chắn đạt B (hoặc hơn)"
+        elif score_b > 10:
+            b_msg = f"KHÔNG THỂ (Cần {score_b:.2f})"
+        else:
+            b_msg = f"Cần >= {score_b:.2f}"
 
-st.divider()
+        print(f"Điểm cuối kì cần để đạt B (7.0): {b_msg}")
 
-# Hiển thị điểm tích lũy
-st.subheader(f"Điểm bộ phận (hệ số 0.4): :blue[{current:.2f}]")
-st.caption(f"Bạn cần thêm bao nhiêu điểm thi (hệ số 0.6) để đạt mục tiêu?")
+    except ValueError:
+        print("Lỗi: Nhập số không đúng định dạng.")
 
-# Hàm tính logic
-def get_needed_score(target_gpa):
-    return (target_gpa - current) / w_final
-
-# --- Xử lý hiển thị kết quả ---
-col_res1, col_res2 = st.columns(2)
-
-# 1. Mục tiêu qua môn (D - 4.0)
-score_pass = get_needed_score(4.0)
-with col_res1:
-    st.info(" Qua môn (>= 4.0)")
-    if score_pass <= 0:
-        st.success("✅ Đã qua môn")
-        score_pass = 0
-    elif score_pass > 10:
-        st.error(f"❌ No hope (Cần {score_pass:.2f})")
-    else:
-        st.warning(f"Cần thi >= **{score_pass:.2f}**")
-
-# 2. Mục tiêu B (7.0)
-score_b = get_needed_score(7.0)
-with col_res2:
-    st.info("⭐ Đạt B (>= 7.0)")
-    if score_b <= 0:
-        st.success("✅ Chắc chắn B")
-    elif score_b > 10:
-        st.error(f"❌ Không thể (Cần {score_b:.2f})")
-    else:
-        st.warning(f"Cần thi >= **{score_b:.2f}**")
-
-# 3. Chiến thuật né C (Dưới 5.5)
-st.divider()
-st.subheader(" Chiến thuật: Né C để học cải thiện")
-score_reach_c = get_needed_score(5.5)
-
-if score_reach_c <= 0:
-    st.error("Không thể về D.")
-elif score_pass > 10:
-    st.error(" Đã trượt, không còn cơ hội.")
-else:
-    safe_max = score_reach_c - 0.1
-    if safe_max < score_pass:
-        st.warning("Rất dễ dính C!")
-    else:
-        st.success(f"🎯 Để đạt D/D+ , điểm thi cần trong khoảng:")
-        st.markdown(f"### `{score_pass:.2f}` $\le$ Điểm Thi $<$ `{score_reach_c:.2f}`")
-        st.caption(f"(Lời khuyên : Thi tầm {score_pass+0.5:.2f} đến {safe_max-0.5:.2f})")
-
-# Nút tác giả (Credit)
-st.write("---")
-st.caption(" by na")
+if __name__ == "__main__":
+    calculate_grade_strategy()
